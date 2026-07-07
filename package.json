@@ -1,0 +1,15 @@
+{
+  "name": "baymax-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Baymax — Your Personal AI Companion with Deep Memory",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:mobile\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:mobile": "cd mobile && npm start",
+    "install:all": "npm install && cd server && npm install && cd ../mobile && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
