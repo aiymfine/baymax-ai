@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────
-// Baymax — SQLite Schema (sql.js / WASM)
+// Baymax — SQLite Schema (sql.js / WASM, better-sqlite3 compatible API)
 // ─────────────────────────────────────────────────
 
 const initSqlJs = require('sql.js');
@@ -8,7 +8,7 @@ const fs = require('fs');
 
 const DEFAULT_DATA_DIR = './data';
 
-let db = null;
+let _db = null;
 let dbPath = null;
 
 async function initDb() {
@@ -17,26 +17,25 @@ async function initDb() {
   dbPath = path.join(process.env.DATA_DIR || DEFAULT_DATA_DIR, 'baymax.db');
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-  // Load existing DB or create new
   if (fs.existsSync(dbPath)) {
     const buf = fs.readFileSync(dbPath);
-    db = new SQL.Database(buf);
+    _db = new SQL.Database(buf);
   } else {
-    db = new SQL.Database();
+    _db = new SQL.Database();
   }
 
-  // Enable WAL-like behavior (sql.js doesn't support WAL, but we save periodically)
   createTables();
   seedDefaults();
   saveDb();
 
-  return db;
+  // Return wrapped db for compatibility
+  return wrapDb(_db);
 }
 
 function saveDb() {
-  if (!db || !dbPath) return;
+  if (!_db || !dbPath) return;
   try {
-    const data = db.export();
+    const data = _db.export();
     const buffer = Buffer.from(data);
     fs.writeFileSync(dbPath, buffer);
   } catch (err) {
@@ -44,14 +43,13 @@ function saveDb() {
   }
 }
 
-// Save DB to disk periodically (every 30 seconds)
 let saveInterval = null;
 function startAutoSave() {
   saveInterval = setInterval(saveDb, 30_000);
 }
 
 function createTables() {
-  db.run(`
+  _db.run(`
     CREATE TABLE IF NOT EXISTS conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT,
@@ -128,91 +126,110 @@ function createTables() {
 }
 
 function seedDefaults() {
-  const count = queryOne('SELECT COUNT(*) as c FROM personas').c;
-  if (count === 0) {
-    seedDefaultPersonas();
-  }
+  const stmt = _db.prepare('SELECT COUNT(*) as c FROM personas');
+  stmt.step();
+  const count = stmt.getAsObject().c;
+  stmt.free();
 
-  const profileCount = queryOne('SELECT COUNT(*) as c FROM user_profile').c;
+  if (count === 0) seedDefaultPersonas();
+
+  const stmt2 = _db.prepare('SELECT COUNT(*) as c FROM user_profile');
+  stmt2.step();
+  const profileCount = stmt2.getAsObject().c;
+  stmt2.free();
+
   if (profileCount === 0) {
-    db.run('INSERT INTO user_profile (id) VALUES (1)');
+    _db.run('INSERT INTO user_profile (id) VALUES (1)');
   }
 }
 
 function seedDefaultPersonas() {
   const { defaultPersonas } = require('../personas/definitions');
+  const insert = _db.prepare(
+    'INSERT OR IGNORE INTO personas (name, display_name, description, system_prompt, emoji, is_default) VALUES (?, ?, ?, ?, ?, ?)'
+  );
   for (const p of defaultPersonas) {
-    db.run(
-      'INSERT OR IGNORE INTO personas (name, display_name, description, system_prompt, emoji, is_default) VALUES (?, ?, ?, ?, ?, ?)',
-      [p.name, p.displayName, p.description, p.systemPrompt, p.emoji, p.isDefault ? 1 : 0]
-    );
+    insert.run([p.name, p.displayName, p.description, p.systemPrompt, p.emoji, p.isDefault ? 1 : 0]);
   }
+  insert.free();
 }
 
-// ── Query helpers (sql.js compatible) ──────────
+// ── Wrapper: makes sql.js look like better-sqlite3 ──
 
-function queryOne(sql, params = []) {
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
-  if (stmt.step()) {
+function wrapDb(rawDb) {
+  return {
+    /**
+     * prepare(sql) — returns a statement with .get(), .all(), .run()
+     * Compatible with better-sqlite3 API
+     */
+    prepare(sql) {
+      return {
+        // .get(params) — returns first row as object, or null
+        get(...params) {
+          const stmt = rawDb.prepare(sql);
+          if (params.length > 0 && params[0] !== undefined) stmt.bind(params);
+          let row = null;
+          if (stmt.step()) row = stmt.getAsObject();
+          stmt.free();
+          return row;
+        },
+        // .all(params) — returns all rows as array
+        all(...params) {
+          const stmt = rawDb.prepare(sql);
+          if (params.length > 0 && params[0] !== undefined) stmt.bind(params);
+          const results = [];
+          while (stmt.step()) results.push(stmt.getAsObject());
+          stmt.free();
+          return results;
+        },
+        // .run(params) — execute INSERT/UPDATE/DELETE, returns { lastInsertRowid, changes }
+        run(...params) {
+          if (params.length > 0 && params[0] !== undefined) {
+            rawDb.run(sql, params);
+          } else {
+            rawDb.run(sql);
+          }
+          return _dbInfo(rawDb);
+        },
+      };
+    },
+
+    // Top-level run for convenience (used by extractor)
+    run(sql, params) {
+      if (params && params.length > 0) {
+        rawDb.run(sql, params);
+      } else {
+        rawDb.run(sql);
+      }
+      return _dbInfo(rawDb);
+    },
+
+    // Raw exec for DDL / multi-statement
+    exec(sql) {
+      rawDb.run(sql);
+    },
+  };
+}
+
+function _dbInfo(rawDb) {
+  try {
+    const stmt = rawDb.prepare('SELECT last_insert_rowid() as id');
+    stmt.step();
     const row = stmt.getAsObject();
     stmt.free();
-    return row;
+    const stmt2 = rawDb.prepare('SELECT changes() as c');
+    stmt2.step();
+    const row2 = stmt2.getAsObject();
+    stmt2.free();
+    return { lastInsertRowid: row.id, changes: row2.c };
+  } catch {
+    return { lastInsertRowid: 0, changes: 0 };
   }
-  stmt.free();
-  return null;
-}
-
-function queryAll(sql, params = []) {
-  const results = [];
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
-  while (stmt.step()) {
-    results.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return results;
-}
-
-function run(sql, params = []) {
-  db.run(sql, params);
-  // sql.js doesn't return changes info like better-sqlite3
-  // We simulate it with lastInsertRowid
-  const result = queryOne('SELECT last_insert_rowid() as lastInsertRowid, changes() as changes');
-  return result;
 }
 
 function getDb() {
-  if (!db) throw new Error('Database not initialized. Call initDb() first.');
-  return db;
+  if (!_db) throw new Error('Database not initialized. Call initDb() first.');
+  return wrapDb(_db);
 }
 
-module.exports = {
-  initDb,
-  getDb,
-  saveDb,
-  startAutoSave,
-  // sql.js compatible query helpers
-  prepare: (sql) => {
-    const stmt = db.prepare(sql);
-    return {
-      bind: (params) => { stmt.bind(params); return this; },
-      get: (params) => {
-        if (params) stmt.bind(params);
-        if (stmt.step()) { const row = stmt.getAsObject(); stmt.free(); return row; }
-        stmt.free(); return null;
-      },
-      all: (params) => {
-        if (params) stmt.bind(params);
-        const results = [];
-        while (stmt.step()) results.push(stmt.getAsObject());
-        stmt.free(); return results;
-      },
-      run: (params) => {
-        db.run(sql, params || []);
-        return { lastInsertRowid: queryOne('SELECT last_insert_rowid() as id').id, changes: queryOne('SELECT changes() as c').c };
-      },
-      free: () => stmt.free(),
-    };
-  },
-};
+module.exports = { initDb, getDb, saveDb, startAutoSave };
