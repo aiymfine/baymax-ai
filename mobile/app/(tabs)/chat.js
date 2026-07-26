@@ -24,10 +24,13 @@ export default function ChatScreen() {
   const [healthStatus, setHealthStatus] = React.useState(null);
   const flatListRef = React.useRef(null);
 
-  // Load personas on mount
+  // Load personas on mount + poll health every 30s
   useEffect(() => {
     api.getPersonas().then(setPersonas).catch(console.error);
-    api.checkHealth().then(setHealthStatus).catch(console.error);
+    const checkHealth = () => api.checkHealth().then(setHealthStatus).catch(() => {});
+    checkHealth();
+    const interval = setInterval(checkHealth, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   // Auto-scroll to bottom
@@ -72,6 +75,16 @@ export default function ChatScreen() {
         selected={persona}
         onSelect={setPersona}
       />
+
+      {/* Ollama warning */}
+      {healthStatus && !healthStatus.ollama?.ok && (
+        <View style={styles.warningBanner}>
+          <Ionicons name="warning" size={16} color="#f59e0b" />
+          <Text style={styles.warningText}>
+            Ollama not connected. Start it with: ollama serve
+          </Text>
+        </View>
+      )}
 
       {/* Messages */}
       <FlatList
@@ -249,5 +262,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 4,
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#2d1f0e',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f59e0b33',
+  },
+  warningText: {
+    color: '#f59e0b',
+    fontSize: 12,
+    flex: 1,
   },
 });

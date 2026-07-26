@@ -1,10 +1,12 @@
 import React from 'react';
-import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
+import { useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
 import * as api from '../services/api';
 import { useChat } from '../hooks/useChat';
+
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ConversationsScreen() {
   const [conversations, setConversations] = useState([]);
@@ -23,7 +25,12 @@ export default function ConversationsScreen() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  // Reload every time tab gains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      load();
+    }, [])
+  );
 
   const handleSelect = async (conv) => {
     Alert.alert(
@@ -64,9 +71,16 @@ export default function ConversationsScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>💬 History</Text>
-        <TouchableOpacity onPress={load} style={styles.refreshBtn}>
+        <TouchableOpacity
+          style={styles.refreshBtn}
+          onPress={() => { clear(); router.push('/(tabs)/chat'); }}
+        >
+          <Ionicons name="add-circle" size={24} color="#3b82f6" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={load} style={styles.refreshBtn2}>
           <Ionicons name="refresh" size={20} color="#64748b" />
         </TouchableOpacity>
       </View>
@@ -126,7 +140,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f0f23' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, gap: 12 },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#e2e8f0' },
-  refreshBtn: { position: 'absolute', right: 16 },
+  refreshBtn: { position: 'absolute', right: 50 },
+  refreshBtn2: { position: 'absolute', right: 16 },
   list: { padding: 12, gap: 8 },
   emptyList: { flexGrow: 1 },
   emptyState: { alignItems: 'center', paddingVertical: 80, gap: 12 },

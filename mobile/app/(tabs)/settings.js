@@ -8,13 +8,24 @@ import * as api from '../services/api';
 export default function SettingsScreen() {
   const [serverUrl, setServerUrl] = useState('');
   const [userName, setUserName] = useState('');
+  const [profileSummary, setProfileSummary] = useState('');
   const [health, setHealth] = useState(null);
 
   useEffect(() => {
     api.getBaseUrl().then(setServerUrl);
-    api.getProfile().then((p) => { if (p?.name) setUserName(p.name); });
+    api.getProfile().then((p) => {
+      if (p?.name) setUserName(p.name);
+      if (p?.summary) setProfileSummary(p.summary);
+    });
     api.checkHealth().then(setHealth);
   }, []);
+
+  const refreshProfile = async () => {
+    try {
+      const p = await api.getProfile();
+      if (p?.summary) setProfileSummary(p.summary);
+    } catch {}
+  };
 
   const saveServerUrl = async () => {
     try {
@@ -93,6 +104,20 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.hint}>This helps Baymax personalize responses.</Text>
+
+          {profileSummary ? (
+            <View style={styles.profileCard}>
+              <View style={styles.profileHeader}>
+                <Text style={styles.profileLabel}>🧠 What Baymax Knows</Text>
+                <TouchableOpacity onPress={refreshProfile}>
+                  <Ionicons name="refresh" size={16} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.profileSummary}>{profileSummary}</Text>
+            </View>
+          ) : (
+            <Text style={styles.hint}>Chat more and Baymax will learn about you.</Text>
+          )}
         </View>
 
         {/* About */}
@@ -140,5 +165,19 @@ const styles = StyleSheet.create({
   healthText: { color: '#94a3b8', fontSize: 14 },
   healthModels: { color: '#475569', fontSize: 12, marginTop: 2 },
   hint: { color: '#475569', fontSize: 13 },
+  profileCard: {
+    backgroundColor: '#1a1a3e',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 8,
+    gap: 8,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  profileLabel: { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
+  profileSummary: { color: '#cbd5e1', fontSize: 14, lineHeight: 20 },
   aboutText: { color: '#64748b', fontSize: 14, lineHeight: 20 },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Clipboard, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const ROLES = {
@@ -13,8 +13,17 @@ export default function ChatBubble({ message }) {
   const { role, content } = message;
   const config = ROLES[role] || ROLES.assistant;
 
+  const handleLongPress = () => {
+    Clipboard.setString(content);
+  };
+
   return (
-    <View style={[styles.bubbleRow, { justifyContent: config.align }]}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onLongPress={handleLongPress}
+      delayLongPress={400}
+      style={[styles.bubbleRow, { justifyContent: config.align }]}
+    >
       {config.align === 'flex-start' && (
         <View style={styles.avatar}>
           <Ionicons name={config.icon} size={20} color="#60a5fa" />
@@ -30,7 +39,7 @@ export default function ChatBubble({ message }) {
           <Ionicons name={config.icon} size={20} color="#a78bfa" />
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 

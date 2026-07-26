@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import * as api from '../services/api';
@@ -12,6 +12,7 @@ export default function MemoryScreen() {
   const [daily, setDaily] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -85,8 +86,29 @@ export default function MemoryScreen() {
 
       {/* Content */}
       {tab === 'facts' && (
+        <>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={16} color="#475569" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search memories..."
+            placeholderTextColor="#475569"
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={18} color="#475569" />
+            </TouchableOpacity>
+          )}
+        </View>
         <FlatList
-          data={facts}
+          data={facts.filter((f) =>
+            !search ||
+            f.content?.toLowerCase().includes(search.toLowerCase()) ||
+            f.category?.toLowerCase().includes(search.toLowerCase()) ||
+            f.person_name?.toLowerCase().includes(search.toLowerCase())
+          )}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
@@ -113,6 +135,7 @@ export default function MemoryScreen() {
             </View>
           )}
         />
+        </>
       )}
 
       {tab === 'people' && (
@@ -260,6 +283,23 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: '#1e293b' },
   tabLabel: { fontSize: 14, color: '#64748b' },
   tabLabelActive: { color: '#3b82f6', fontWeight: '600' },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginHorizontal: 12,
+    marginBottom: 4,
+    backgroundColor: '#1a1a3e',
+    borderRadius: 12,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#e2e8f0',
+    fontSize: 14,
+    paddingVertical: 4,
+  },
   listContent: { padding: 12, gap: 8 },
   emptyState: { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyText: { color: '#475569', fontSize: 15 },
