@@ -9,7 +9,9 @@
     "scheme": "baymax",
     "newArchEnabled": true,
     "splash": {
-      "backgroundColor": "#0f0f23"
+      "image": "./assets/icon.png",
+      "backgroundColor": "#0f0f23",
+      "resizeMode": "contain"
     },
     "ios": {
       "supportsTablet": true,
@@ -17,6 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0f0f23"
       },
       "package": "ai.baymax.app"

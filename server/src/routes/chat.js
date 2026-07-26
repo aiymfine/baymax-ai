@@ -80,13 +80,29 @@ router.post('/', async (req, res) => {
       'INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)'
     ).run(convId, 'assistant', response);
 
-    // Update conversation title if first message
+    // Update conversation title if first exchange
     const msgCount = db.prepare(
       'SELECT COUNT(*) as c FROM messages WHERE conversation_id = ?'
     ).get(convId).c;
     if (msgCount <= 2) {
-      const title = message.trim().slice(0, 60) + (message.length > 60 ? '...' : '');
-      db.prepare('UPDATE conversations SET title = ? WHERE id = ?').run(title, convId);
+      // Generate a short title from the first message
+      const shortTitle = message.trim().slice(0, 50);
+      db.prepare('UPDATE conversations SET title = ? WHERE id = ?').run(shortTitle, convId);
+      // Try to generate a better title in background
+      setImmediate(async () => {
+        try {
+          const titleResp = await ollama.chat({
+            messages: [{
+              role: 'user',
+              content: `Generate a very short title (3-5 words max, no quotes) for a conversation that starts with this message: "${message.trim().slice(0, 200)}". Reply with ONLY the title, nothing else.`,
+            }],
+          });
+          const cleanTitle = titleResp.trim().replace(/^["']|["']$/g, '').slice(0, 60);
+          if (cleanTitle) {
+            db.prepare('UPDATE conversations SET title = ? WHERE id = ?').run(cleanTitle, convId);
+          }
+        } catch {}
+      });
     }
 
     res.json({

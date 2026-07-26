@@ -16,6 +16,7 @@ export default function ChatScreen() {
     setPersona,
     send,
     loadConversation,
+    clear,
   } = useChat();
 
   const [input, setInput] = React.useState('');
@@ -60,6 +61,9 @@ export default function ChatScreen() {
         {!healthStatus?.ollama?.ok && healthStatus && (
           <Text style={styles.statusText}>Ollama not connected</Text>
         )}
+        <TouchableOpacity style={styles.newChatBtn} onPress={clear}>
+          <Ionicons name="add-circle-outline" size={24} color="#3b82f6" />
+        </TouchableOpacity>
       </View>
 
       {/* Persona selector */}
@@ -72,9 +76,22 @@ export default function ChatScreen() {
       {/* Messages */}
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={loading ? [...messages, { role: 'typing', content: '' }] : messages}
         keyExtractor={(item, i) => i.toString()}
-        renderItem={({ item }) => <ChatBubble message={item} />}
+        renderItem={({ item }) =>
+          item.role === 'typing' ? (
+            <View style={[styles.bubbleRow, { justifyContent: 'flex-start' }]}>
+              <View style={styles.avatar}>
+                <Ionicons name="robot" size={20} color="#60a5fa" />
+              </View>
+              <View style={[styles.bubble, { backgroundColor: '#1e293b' }]}>
+                <ActivityIndicator size="small" color="#60a5fa" />
+              </View>
+            </View>
+          ) : (
+            <ChatBubble message={item} />
+          )
+        }
         style={styles.messageList}
         contentContainerStyle={styles.messageContent}
         ListEmptyComponent={
@@ -134,6 +151,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     gap: 8,
+  },
+  newChatBtn: {
+    position: 'absolute',
+    right: 16,
   },
   headerTitle: {
     fontSize: 20,
@@ -208,5 +229,25 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     backgroundColor: '#1e293b',
+  },
+  bubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  bubble: {
+    borderRadius: 18,
+    padding: 12,
+    paddingVertical: 10,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
   },
 });

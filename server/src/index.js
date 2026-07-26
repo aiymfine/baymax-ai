@@ -121,3 +121,19 @@ start().catch((err) => {
   console.error('[Baymax] Fatal error:', err);
   process.exit(1);
 });
+
+// ── Graceful Shutdown ───────────────────────────
+function shutdown(signal) {
+  console.log(`\n[Baymax] ${signal} received. Saving database...`);
+  try {
+    const { saveDb } = require('./db/schema');
+    saveDb();
+    console.log('[Baymax] Database saved. Goodbye! 👋');
+  } catch (e) {
+    console.error('[Baymax] Save on shutdown failed:', e.message);
+  }
+  process.exit(0);
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
