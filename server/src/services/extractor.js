@@ -141,4 +141,52 @@ async function updateUserProfile(db) {
   }
 }
 
-module.exports = { extractFacts, processAndStoreFacts, updateUserProfile };
+/**
+ * Generate a daily summary from the day's messages.
+ */
+async function generateDailySummary(db) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Check if already generated
+    const existing = db.prepare('SELECT id FROM daily_summaries WHERE date = ?').get(today);
+    if (existing) return;
+
+    // Get today's messages
+    const messages = db.prepare(
+      `SELECT m.content, m.role, m.created_at
+       FROM messages m
+       WHERE DATE(m.created_at) = ?
+       ORDER BY m.created_at ASC`
+    ).all(today);
+
+    if (messages.length < 5) return; // Not enough conversation to summarize
+
+    const transcript = messages
+      .map((m) => `${m.role === 'user' ? 'User' : 'Baymax'}: ${m.content}`)
+      .join('\n');
+
+    const response = await ollama.chat({
+      messages: [{
+        role: 'user',
+        content: `Summarize today's conversation between the user and Baymax. Write a concise summary (2-3 sentences) of what was discussed. Also identify the user's overall mood today (one word: happy, sad, neutral, anxious, excited, frustrated, calm). And list 1-3 main topics.\n\nFormat your response as JSON:\n{"summary": "...", "mood": "...", "topics": ["topic1", "topic2"]}\n\nConversation:\n${transcript}`,
+      }],
+    });
+
+    const cleaned = response.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    db.run(
+      `INSERT OR REPLACE INTO daily_summaries (date, summary, mood, topics, message_count)
+       VALUES (?, ?, ?, ?, ?)`,
+      [today, parsed.summary || '', parsed.mood || 'unknown',
+       JSON.stringify(parsed.topics || []), messages.length]
+    );
+    saveDb();
+    console.log(`[Extractor] Daily summary generated for ${today}: ${parsed.mood}`);
+  } catch (err) {
+    console.error('[Extractor] Daily summary failed:', err.message);
+  }
+}
+
+module.exports = { extractFacts, processAndStoreFacts, updateUserProfile, generateDailySummary };

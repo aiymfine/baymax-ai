@@ -41,10 +41,15 @@ async function retrieveContext(db, userMessage, personaName = 'baymax') {
     ).all().map((r) => r.person_name);
 
     for (const person of mentionedPeople) {
-      // Simple check: does the message contain the person's name?
+      // Word-boundary match: "Al" shouldn't match "Alice"
       const lowerMsg = userMessage.toLowerCase();
       const lowerPerson = person.toLowerCase();
-      if (lowerMsg.includes(lowerPerson) || lowerPerson.includes(lowerMsg)) {
+      const personWords = lowerPerson.split(/\s+/);
+      const allWordsMatch = personWords.every((w) => {
+        const re = new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        return re.test(lowerMsg);
+      });
+      if (allWordsMatch || (lowerPerson.length >= 4 && lowerMsg.includes(lowerPerson))) {
         const personFacts = db.prepare(
           'SELECT content, category, created_at FROM facts WHERE person_name = ? ORDER BY created_at DESC LIMIT 20'
         ).all(person);

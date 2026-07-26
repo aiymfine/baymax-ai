@@ -220,7 +220,7 @@ cd mobile && npm start
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/chat` | Send a message, get AI response |
-| GET | `/api/chat/stream` | SSE streaming chat |
+| POST | `/api/chat/stream` | SSE streaming chat |
 | GET | `/api/chat/conversations` | List all conversations |
 | GET | `/api/chat/conversations/:id` | Get conversation with messages |
 | DELETE | `/api/chat/conversations/:id` | Delete a conversation |

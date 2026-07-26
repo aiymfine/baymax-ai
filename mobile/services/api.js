@@ -102,5 +102,39 @@ export async function checkHealth() {
   }
 }
 
+// ── Streaming Chat (POST + SSE) ──────────────────
+export async function sendMessageStream({ message, persona, conversationId, onChunk }) {
+  const baseUrl = await getBaseUrl();
+  const res = await fetch(`${baseUrl}/api/chat/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, persona, conversationId }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Stream failed' }));
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split('\n').filter((l) => l.trim());
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.content && onChunk) onChunk(data.content);
+          if (data.done) return data;
+        } catch {}
+      }
+    }
+  }
+}
+
 // ── Config ──────────────────────────────────────
 export { getBaseUrl, setBaseUrl };

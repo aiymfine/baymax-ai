@@ -46,7 +46,14 @@ router.post('/', async (req, res) => {
     // Extract facts in background (don't block response)
     setImmediate(async () => {
       try {
-        await extractor.processAndStoreFacts(db, message.trim(), userMsgId);
+        const facts = await extractor.processAndStoreFacts(db, message.trim(), userMsgId);
+        // Update user profile every 5+ new facts
+        if (facts.length > 0) {
+          const stats = db.prepare('SELECT COUNT(*) as c FROM facts').get();
+          if (stats.c % 5 === 0 || stats.c <= 5) {
+            await extractor.updateUserProfile(db);
+          }
+        }
       } catch (err) {
         console.error('[Chat] Fact extraction failed:', err.message);
       }
@@ -94,12 +101,12 @@ router.post('/', async (req, res) => {
 });
 
 /**
- * GET /api/chat/stream — SSE streaming chat endpoint
- * Query: message, persona, conversationId?
+ * POST /api/chat/stream — SSE streaming chat endpoint
+ * Body: { message, persona, conversationId? }
  */
-router.get('/stream', async (req, res) => {
+router.post('/stream', async (req, res) => {
   try {
-    const { message, persona = 'baymax', conversationId } = req.query;
+    const { message, persona = 'baymax', conversationId } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
@@ -121,7 +128,13 @@ router.get('/stream', async (req, res) => {
 
     setImmediate(async () => {
       try {
-        await extractor.processAndStoreFacts(db, message, userMsgResult.lastInsertRowid);
+        const facts = await extractor.processAndStoreFacts(db, message, userMsgResult.lastInsertRowid);
+        if (facts.length > 0) {
+          const stats = db.prepare('SELECT COUNT(*) as c FROM facts').get();
+          if (stats.c % 5 === 0 || stats.c <= 5) {
+            await extractor.updateUserProfile(db);
+          }
+        }
       } catch (e) {
         console.error('[Chat] Fact extraction failed:', e.message);
       }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import * as api from '../services/api';
@@ -33,8 +33,21 @@ export default function MemoryScreen() {
   useEffect(() => { load(); }, []);
 
   const deleteFact = async (id) => {
-    await api.deleteFact(id);
-    setFacts((prev) => prev.filter((f) => f.id !== id));
+    Alert.alert(
+      'Delete Memory',
+      'Are you sure you want to delete this memory? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await api.deleteFact(id);
+            setFacts((prev) => prev.filter((f) => f.id !== id));
+          },
+        },
+      ]
+    );
   };
 
   const tabs = [

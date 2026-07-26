@@ -15,10 +15,28 @@ const PORT = process.env.PORT || 3200;
 
 const app = express();
 
+// ── CORS ────────────────────────────────────────
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim())
+  : null; // null = allow all (dev mode)
+app.use(cors(corsOrigins ? { origin: corsOrigins } : undefined));
+
 // ── Middleware ──────────────────────────────────
-app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
+
+// ── API Key Auth (optional) ─────────────────────
+const API_KEY = process.env.API_KEY;
+if (API_KEY) {
+  app.use('/api/', (req, res, next) => {
+    const auth = req.headers.authorization;
+    if (!auth || auth !== `Bearer ${API_KEY}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+  });
+  console.log('[Baymax] API key authentication enabled.');
+}
 
 // Rate limiting
 const limiter = rateLimit({
@@ -74,6 +92,28 @@ async function start() {
     console.log('  ║     API: http://localhost:' + PORT + '/api      ║');
     console.log('  ╚═══════════════════════════════════════╝');
     console.log('');
+
+    // Daily summary check (every hour)
+    const { generateDailySummary } = require('./services/extractor');
+    const { getDb } = require('./db/schema');
+    setInterval(async () => {
+      try {
+        const { checkHealth } = require('./services/ollama');
+        const status = await checkHealth();
+        if (status.ok) {
+          await generateDailySummary(getDb());
+        }
+      } catch (e) {
+        // Silent fail — don't spam logs
+      }
+    }, 3600_000); // 1 hour
+    // Also try after 30 seconds on startup
+    setTimeout(async () => {
+      try {
+        const status = await ollama.checkHealth();
+        if (status.ok) await generateDailySummary(getDb());
+      } catch {}
+    }, 30_000);
   });
 }
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as api from '../services/api';
 import { useChat } from '../hooks/useChat';
 
@@ -26,8 +26,6 @@ export default function ConversationsScreen() {
   useEffect(() => { load(); }, []);
 
   const handleSelect = async (conv) => {
-    // In a real navigation setup, this would navigate to chat with the conversation loaded
-    // For now, we'll show a confirmation
     Alert.alert(
       'Open Conversation',
       `"${conv.title || 'Untitled'}" (${conv.message_count} messages)\n\nTap OK to load this conversation.`,
@@ -37,7 +35,7 @@ export default function ConversationsScreen() {
           text: 'Open',
           onPress: async () => {
             await loadConversation(conv.id);
-            // Navigate would happen here with a proper router setup
+            router.push('/(tabs)/chat');
           },
         },
       ]

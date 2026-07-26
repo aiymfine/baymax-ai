@@ -1,15 +1,18 @@
 // ─────────────────────────────────────────────────
-// useChat Hook — Manages conversation state
+// useChat Hook — Manages conversation state (global)
 // ─────────────────────────────────────────────────
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, createContext, useContext } from 'react';
 import * as api from '../services/api';
 
-export function useChat() {
+// ── Global state via Context ─────────────────────
+const ChatContext = createContext(null);
+
+export function ChatProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState(null);
-  const [persona, setPersona] = useState('baymax');
+  const [persona, setPersonaState] = useState('baymax');
   const loadingRef = useRef(false);
 
   const send = useCallback(async (text) => {
@@ -60,12 +63,19 @@ export function useChat() {
     }
   }, [persona, conversationId]);
 
+  // Switching persona starts a fresh conversation
+  const setPersona = useCallback((newPersona) => {
+    setPersonaState(newPersona);
+    setMessages([]);
+    setConversationId(null);
+  }, []);
+
   const loadConversation = useCallback(async (id) => {
     try {
       const conv = await api.getConversation(id);
       setConversationId(conv.id);
       setMessages(conv.messages || []);
-      setPersona(conv.persona || 'baymax');
+      setPersonaState(conv.persona || 'baymax');
       return conv;
     } catch (err) {
       console.error('Failed to load conversation:', err);
@@ -78,7 +88,7 @@ export function useChat() {
     setConversationId(null);
   }, []);
 
-  return {
+  const value = {
     messages,
     loading,
     conversationId,
@@ -88,4 +98,12 @@ export function useChat() {
     loadConversation,
     clear,
   };
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+}
+
+export function useChat() {
+  const ctx = useContext(ChatContext);
+  if (!ctx) throw new Error('useChat must be used within ChatProvider');
+  return ctx;
 }
