@@ -106,4 +106,20 @@ router.get('/stats', (req, res) => {
   }
 });
 
+/**
+ * GET /api/memory/daily — List daily summaries
+ */
+router.get('/daily', (req, res) => {
+  try {
+    const db = getDb();
+    const limit = parseInt(req.query.limit) || 7;
+    const summaries = db.prepare(
+      'SELECT * FROM daily_summaries ORDER BY date DESC LIMIT ?'
+    ).all(limit);
+    res.json(summaries);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

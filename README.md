@@ -229,6 +229,7 @@ cd mobile && npm start
 | GET | `/api/memory/people` | List known people |
 | GET | `/api/memory/profile` | Get user profile |
 | PUT | `/api/memory/profile` | Update user profile |
+| GET | `/api/memory/daily` | Daily summaries (mood, topics) |
 | GET | `/api/memory/stats` | Memory statistics |
 | GET | `/api/personas` | List personas |
 | POST | `/api/personas` | Create custom persona |
@@ -242,7 +243,7 @@ cd mobile && npm start
 - [ ] Voice input (record → transcribe on server)
 - [ ] Voice output (TTS responses)
 - [ ] Wake word activation
-- [ ] Daily summary generation
+- [x] Daily summary generation
 - [ ] Mood tracking dashboard
 - [ ] Custom persona creation in app
 - [ ] Export/import memory data

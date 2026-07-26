@@ -138,3 +138,8 @@ export async function sendMessageStream({ message, persona, conversationId, onCh
 
 // ── Config ──────────────────────────────────────
 export { getBaseUrl, setBaseUrl };
+
+// ── Daily Summaries ──────────────────────────────
+export async function getDailySummaries(limit = 7) {
+  return request(`/memory/daily?limit=${limit}`);
+}
