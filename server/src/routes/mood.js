@@ -39,7 +39,7 @@ router.get('/insights', async (req, res) => {
       WHERE mood IS NOT NULL AND mood != ''
       ORDER BY date DESC
       LIMIT 14
-    `).all(14);
+    `).all();
 
     if (summaries.length < 3) {
       return res.json({
