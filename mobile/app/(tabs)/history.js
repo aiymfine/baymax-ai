@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
-import * as api from '../services/api';
-import { useChat } from '../hooks/useChat';
+import * as api from '../../services/api';
+import { useChat } from '../../hooks/useChat';
 
 import { useFocusEffect } from '@react-navigation/native';
 

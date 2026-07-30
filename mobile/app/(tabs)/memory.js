@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
-import * as api from '../services/api';
+import * as api from '../../services/api';
 
 export default function MemoryScreen() {
   const [tab, setTab] = useState('facts'); // facts, people, daily, stats

@@ -4,7 +4,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, A
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import * as api from '../services/api';
+import * as api from '../../services/api';
 
 const MOOD_CONFIG = {
   happy: { emoji: '😄', color: '#22c55e', label: 'Happy' },

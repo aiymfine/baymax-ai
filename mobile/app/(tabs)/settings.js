@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
-import * as api from '../services/api';
+import * as api from '../../services/api';
 
 export default function SettingsScreen() {
   const [serverUrl, setServerUrl] = useState('');

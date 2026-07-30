@@ -3,10 +3,10 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { Text, View, TouchableOpacity, TextInput, FlatList, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useChat } from '../hooks/useChat';
-import * as api from '../services/api';
-import ChatBubble from '../components/ChatBubble';
-import PersonaSelector from '../components/PersonaSelector';
+import { useChat } from '../../hooks/useChat';
+import * as api from '../../services/api';
+import ChatBubble from '../../components/ChatBubble';
+import PersonaSelector from '../../components/PersonaSelector';
 import CheckInBanner from '../../components/CheckInBanner';
 
 export default function ChatScreen() {
