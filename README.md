@@ -1,4 +1,4 @@
-# 🤖 Baymax — Your Personal AI Companion with Deep Memory
+# ✨ Baymax — Your Personal AI Companion with Deep Memory
 
 <p align="center">
   <strong>AI that actually remembers you.</strong><br/>
@@ -19,9 +19,12 @@
 ## ✨ Features
 
 - **🧠 Deep Memory System** — 4-layer architecture: raw storage → automatic fact extraction → semantic search → context assembly. Baymax doesn't just chat — it learns.
+- **✨ Gen Z Bestie Persona** — Talks like a real friend. Lowercase, sarcasm, actual opinions. No corporate AI energy.
+- **🔔 Proactive Check-ins** — Your AI reaches out first. Morning motivation, afternoon check-ins, references stuff you talked about. Feels alive.
+- **📊 Mood Timeline** — Visual mood tracking over time. See patterns, get AI-generated insights about your emotional trends.
 - **👤 People Knowledge** — Tracks everyone you mention. Ask "what do you think about [person]?" and get an opinion built from everything you've shared.
-- **🎭 Persona System** — Switch between companion personalities: Baymax (warm friend), Dr. Mira (psychologist), Prof. Atlas (teacher), Sage (advisor), or create your own.
-- **📱 Mobile-First** — Expo app for your phone. Chat anywhere.
+- **🎭 Persona System** — Switch between companion personalities: Bestie (Gen Z friend), Baymax (warm companion), Dr. Mira (psychologist), Prof. Atlas (teacher), Sage (advisor), or create your own.
+- **📱 Mobile-First** — Expo app for your phone. 5 tabs: Chat, History, Memory, Mood, Settings.
 - **🔒 Fully Private** — All data stays on YOUR machine. No cloud, no third parties, no tracking.
 - **💰 100% Free** — Uses Ollama (local LLM), SQLite (local DB). Zero API costs.
 
@@ -29,9 +32,10 @@
 
 ```
 📱 Phone (Expo App)
-   ├─ Chat interface with persona selector
-   ├─ Memory browser (facts, people, stats)
+   ├─ Chat interface with persona selector + check-in banners
    ├─ Conversation history
+   ├─ Memory browser (facts, people, daily summaries, stats)
+   ├─ Mood dashboard (timeline, distribution chart, AI insights)
    └─ Settings (server URL, profile)
 
 🖥️ Server (Node.js on your PC)
@@ -39,11 +43,15 @@
    ├─ Build persona-aware prompt → send to Ollama
    ├─ Store response → extract facts in background
    ├─ Compute embeddings → index for semantic search
+   ├─ Proactive check-in generator (every 4h)
+   ├─ Daily summary + mood analysis
    └─ REST API for mobile app
 
 🧠 Ollama (Local LLM)
    ├─ Chat completion (personas + context)
    ├─ Fact extraction (meta-prompting)
+   ├─ Check-in message generation
+   ├─ Mood insight generation
    ├─ User profile summarization
    └─ Embeddings (semantic memory search)
 ```
@@ -94,7 +102,7 @@ npm run dev:server
 Server starts at `http://localhost:3200`. You should see:
 ```
   ╔═══════════════════════════════════════╗
-  ║           🤖 Baymax v1.0.0            ║
+  ║           ✨ Baymax v1.1.0            ║
   ║     Server running on port 3200       ║
   ╚═══════════════════════════════════════╝
 ```
@@ -138,10 +146,36 @@ This is why Baymax's responses get better over time. More conversations = more c
 
 ---
 
+## 🔔 Proactive Check-ins
+
+Your AI doesn't just wait — it reaches out. Every 4 hours, the server generates a personalized check-in message:
+
+- References recent conversations and topics
+- Matches the persona's vibe (Bestie sends Gen Z energy)
+- Respects quiet hours (no 3am spam)
+- Shows up as a banner in the chat tab
+- Tap to read the full message, reply, or dismiss
+
+The check-in generator uses your memory context to make messages feel personal: *"wait didn't you have that exam today?? how'd it go"*
+
+---
+
+## 📊 Mood Tracking
+
+Every day with 5+ messages gets a mood summary. The Mood tab shows:
+
+- **AI Insights** — Patterns spotted across your mood history ("You've been more stressed on Sundays")
+- **Mood Distribution** — Bar chart of your most common moods
+- **Timeline** — Visual dot streak of recent moods
+- **Daily Logs** — Browse past summaries with topics and message counts
+
+---
+
 ## 🎭 Built-in Personas
 
 | Name | Emoji | Description |
 |------|-------|-------------|
+| **Bestie** | ✨ | Gen Z best friend. Real talk, no filter, actually gets it. |
 | **Baymax** | 🤖 | Warm, supportive friend who remembers everything |
 | **Dr. Mira** | 🧠 | Reflective psychologist — listens, asks, explores |
 | **Prof. Atlas** | 📚 | Patient teacher — explains, challenges, helps learn |
@@ -164,25 +198,31 @@ baymax-ai/
 │       │   ├── ollama.js         # Ollama HTTP client (chat + embed)
 │       │   ├── memory.js         # Memory retrieval + context assembly
 │       │   ├── embeddings.js     # Vector search + cosine similarity
-│       │   └── extractor.js      # Automatic fact extraction
+│       │   ├── extractor.js      # Automatic fact extraction
+│       │   └── checkin.js        # Proactive check-in generator
 │       ├── routes/
 │       │   ├── chat.js           # Chat endpoints (send, stream, history)
 │       │   ├── memory.js         # Memory endpoints (facts, people, stats)
-│       │   └── persona.js        # Persona management
+│       │   ├── persona.js        # Persona management
+│       │   ├── checkin.js        # Check-in endpoints
+│       │   └── mood.js           # Mood timeline + insights
 │       └── personas/
 │           └── definitions.js    # Persona system prompts
 ├── mobile/
 │   ├── app/
 │   │   ├── (tabs)/              # Tab screens
 │   │   │   ├── _layout.js       # Tab navigator
-│   │   │   ├── chat.js          # Main chat screen
+│   │   │   ├── chat.js          # Main chat screen + check-in banner
 │   │   │   ├── history.js       # Conversation history
 │   │   │   ├── memory.js        # Memory browser
+│   │   │   ├── mood.js          # Mood dashboard
 │   │   │   └── settings.js      # App settings
 │   │   └── index.js            # Entry point (redirect to chat)
 │   ├── components/
 │   │   ├── ChatBubble.js        # Message bubble component
-│   │   └── PersonaSelector.js   # Persona pill selector
+│   │   ├── PersonaSelector.js   # Persona pill selector
+│   │   ├── CheckInBanner.js     # Proactive check-in notification
+│   │   └── ErrorBoundary.js     # Error boundary
 │   ├── hooks/
 │   │   └── useChat.js           # Chat state management hook
 │   └── services/
@@ -234,6 +274,14 @@ cd mobile && npm start
 | GET | `/api/personas` | List personas |
 | POST | `/api/personas` | Create custom persona |
 | DELETE | `/api/personas/:name` | Delete custom persona |
+| GET | `/api/checkins` | Get unread check-ins |
+| GET | `/api/checkins/recent` | Get recent check-ins |
+| POST | `/api/checkins/:id/read` | Mark check-in as read |
+| POST | `/api/checkins/:id/dismiss` | Dismiss check-in |
+| POST | `/api/checkins/generate` | Manually trigger check-in |
+| GET | `/api/mood/timeline` | Mood timeline (30 days) |
+| GET | `/api/mood/insights` | AI-generated mood insights |
+| GET | `/api/mood/stats` | Mood distribution stats |
 | GET | `/api/health` | Server + Ollama health check |
 
 ---
@@ -244,7 +292,8 @@ cd mobile && npm start
 - [ ] Voice output (TTS responses)
 - [ ] Wake word activation
 - [x] Daily summary generation
-- [ ] Mood tracking dashboard
+- [x] Mood tracking dashboard
+- [x] Proactive check-ins
 - [ ] Custom persona creation in app
 - [ ] Export/import memory data
 - [ ] Multi-user support

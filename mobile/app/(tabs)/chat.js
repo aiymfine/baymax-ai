@@ -7,6 +7,7 @@ import { useChat } from '../hooks/useChat';
 import * as api from '../services/api';
 import ChatBubble from '../components/ChatBubble';
 import PersonaSelector from '../components/PersonaSelector';
+import CheckInBanner from '../../components/CheckInBanner';
 
 export default function ChatScreen() {
   const {
@@ -22,16 +23,55 @@ export default function ChatScreen() {
   const [input, setInput] = React.useState('');
   const [personas, setPersonas] = React.useState([]);
   const [healthStatus, setHealthStatus] = React.useState(null);
+  const [checkIns, setCheckIns] = React.useState([]);
+  const [checkInModal, setCheckInModal] = React.useState(null);
   const flatListRef = React.useRef(null);
 
-  // Load personas on mount + poll health every 30s
+  // Load personas + check-ins on mount + poll health every 30s
   useEffect(() => {
     api.getPersonas().then(setPersonas).catch(console.error);
+    refreshCheckIns();
     const checkHealth = () => api.checkHealth().then(setHealthStatus).catch(() => {});
     checkHealth();
     const interval = setInterval(checkHealth, 30_000);
-    return () => clearInterval(interval);
+    // Poll for check-ins every 2 min
+    const checkInInterval = setInterval(refreshCheckIns, 120_000);
+    return () => { clearInterval(interval); clearInterval(checkInInterval); };
   }, []);
+
+  const refreshCheckIns = async () => {
+    try {
+      const cis = await api.getUnreadCheckIns();
+      setCheckIns(cis);
+    } catch {}
+  };
+
+  const handleCheckInOpen = (ci) => {
+    setCheckInModal(ci);
+  };
+
+  const handleCheckInDismiss = async (id) => {
+    setCheckIns((prev) => prev.filter((c) => c.id !== id));
+    try { await api.dismissCheckIn(id); } catch {}
+  };
+
+  const handleCheckInReply = async () => {
+    if (!checkInModal) return;
+    // Start a conversation with the check-in message as context
+    const msg = checkInModal.message;
+    setCheckInModal(null);
+    await api.markCheckInRead(checkInModal.id);
+    setCheckIns((prev) => prev.filter((c) => c.id !== checkInModal.id));
+    // Send the check-in as if the user is continuing from it
+    await send(`(saw your check-in: "${msg}") hey`);
+  };
+
+  const handleCheckInClose = async () => {
+    if (!checkInModal) return;
+    await api.markCheckInRead(checkInModal.id);
+    setCheckIns((prev) => prev.filter((c) => c.id !== checkInModal.id));
+    setCheckInModal(null);
+  };
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -57,7 +97,7 @@ export default function ChatScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🤖 Baymax</Text>
+        <Text style={styles.headerTitle}>✨ Baymax</Text>
         {healthStatus?.ollama && (
           <View style={[styles.statusDot, { backgroundColor: healthStatus.ollama.ok ? '#22c55e' : '#ef4444' }]} />
         )}
@@ -75,6 +115,37 @@ export default function ChatScreen() {
         selected={persona}
         onSelect={setPersona}
       />
+
+      {/* Check-in banner */}
+      <CheckInBanner
+        checkIns={checkIns}
+        onOpen={handleCheckInOpen}
+        onDismiss={handleCheckInDismiss}
+      />
+
+      {/* Check-in modal */}
+      {checkInModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="sparkles" size={22} color="#a78bfa" />
+              <Text style={styles.modalTitle}>Check-in from {checkInModal.persona}</Text>
+              <TouchableOpacity onPress={handleCheckInClose}>
+                <Ionicons name="close" size={22} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalMessage}>{checkInModal.message}</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalBtn} onPress={handleCheckInClose}>
+                <Text style={styles.modalBtnText}>Thanks 🫶</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnPrimary]} onPress={handleCheckInReply}>
+                <Text style={styles.modalBtnPrimaryText}>Reply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Ollama warning */}
       {healthStatus && !healthStatus.ollama?.ok && (
@@ -109,11 +180,11 @@ export default function ChatScreen() {
         contentContainerStyle={styles.messageContent}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🤖</Text>
-            <Text style={styles.emptyTitle}>Hey, I'm Baymax</Text>
+            <Text style={styles.emptyEmoji}>✨</Text>
+            <Text style={styles.emptyTitle}>Hey, I'm Bestie</Text>
             <Text style={styles.emptySubtitle}>
-              I'm your personal AI companion. I remember everything we talk about.
-              {'\n'}Pick a persona above and say hi!
+              your AI friend that actually remembers stuff{'\n'}
+              pick a vibe above and say hi 👋
             </Text>
           </View>
         }
@@ -277,5 +348,66 @@ const styles = StyleSheet.create({
     color: '#f59e0b',
     fontSize: 12,
     flex: 1,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#1a1a3e',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 380,
+    borderWidth: 1,
+    borderColor: '#a78bfa44',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  modalTitle: {
+    flex: 1,
+    color: '#a78bfa',
+    fontSize: 15,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  modalMessage: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    lineHeight: 23,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+  },
+  modalBtnPrimary: {
+    backgroundColor: '#3b82f6',
+  },
+  modalBtnText: {
+    color: '#94a3b8',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  modalBtnPrimaryText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

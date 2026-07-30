@@ -143,3 +143,37 @@ export { getBaseUrl, setBaseUrl };
 export async function getDailySummaries(limit = 7) {
   return request(`/memory/daily?limit=${limit}`);
 }
+
+// ── Check-Ins ────────────────────────────────────
+export async function getUnreadCheckIns(limit = 5) {
+  return request(`/checkins?limit=${limit}`);
+}
+
+export async function getRecentCheckIns(limit = 10) {
+  return request(`/checkins/recent?limit=${limit}`);
+}
+
+export async function markCheckInRead(id) {
+  return request(`/checkins/${id}/read`, { method: 'POST' });
+}
+
+export async function dismissCheckIn(id) {
+  return request(`/checkins/${id}/dismiss`, { method: 'POST' });
+}
+
+export async function triggerCheckIn(persona) {
+  return request('/checkins/generate', { method: 'POST', body: JSON.stringify({ persona }) });
+}
+
+// ── Mood ─────────────────────────────────────────
+export async function getMoodTimeline(days = 30) {
+  return request(`/mood/timeline?days=${days}`);
+}
+
+export async function getMoodInsights() {
+  return request('/mood/insights');
+}
+
+export async function getMoodStats(days = 30) {
+  return request(`/mood/stats?days=${days}`);
+}

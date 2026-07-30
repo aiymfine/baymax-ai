@@ -118,7 +118,7 @@ export default function ConversationsScreen() {
 }
 
 function getPersonaEmoji(name) {
-  const emojis = { baymax: '🤖', psychologist: '🧠', teacher: '📚', advisor: '💼' };
+  const emojis = { bestie: '✨', baymax: '🤖', psychologist: '🧠', teacher: '📚', advisor: '💼' };
   return emojis[name] || '💬';
 }
 

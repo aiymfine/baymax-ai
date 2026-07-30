@@ -50,13 +50,15 @@ app.use('/api/', limiter);
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/memory', require('./routes/memory'));
 app.use('/api/personas', require('./routes/persona'));
+app.use('/api/checkins', require('./routes/checkin'));
+app.use('/api/mood', require('./routes/mood'));
 
 // ── Health Check ────────────────────────────────
 app.get('/api/health', async (req, res) => {
   const ollamaStatus = await ollama.checkHealth();
   res.json({
     status: 'ok',
-    version: '1.0.0',
+    version: '1.1.0',
     ollama: ollamaStatus,
     timestamp: new Date().toISOString(),
   });
@@ -87,7 +89,7 @@ async function start() {
   app.listen(PORT, () => {
     console.log('');
     console.log('  ╔═══════════════════════════════════════╗');
-    console.log('  ║           🤖 Baymax v1.0.0            ║');
+    console.log('  ║           ✨ Baymax v1.1.0            ║');
     console.log(`  ║     Server running on port ${PORT}        ║`);
     console.log('  ║     API: http://localhost:' + PORT + '/api      ║');
     console.log('  ╚═══════════════════════════════════════╝');
@@ -114,6 +116,32 @@ async function start() {
         if (status.ok) await generateDailySummary(getDb());
       } catch {}
     }, 30_000);
+
+    // ── Proactive Check-In Scheduler ────────────────
+    // Generates a check-in message every ~4 hours if appropriate
+    const { generateCheckIn } = require('./services/checkin');
+    const checkInInterval = 4 * 3600_000; // 4 hours
+    let checkInTimer = null;
+
+    const scheduleNextCheckIn = (delay) => {
+      if (checkInTimer) clearTimeout(checkInTimer);
+      checkInTimer = setTimeout(async () => {
+        try {
+          const status = await ollama.checkHealth();
+          if (status.ok) {
+            const result = await generateCheckIn('bestie');
+            console.log(result ? `[CheckIn] Sent: "${result.message.slice(0, 50)}..."` : '[CheckIn] Skipped (too soon or inactive)');
+          }
+        } catch (e) {
+          console.error('[CheckIn] Scheduler error:', e.message);
+        }
+        scheduleNextCheckIn(checkInInterval);
+      }, delay);
+    };
+
+    // First check-in attempt after 2 minutes, then every 4 hours
+    scheduleNextCheckIn(120_000);
+    console.log('[Baymax] Check-in scheduler started (every 4h).');
   });
 }
 

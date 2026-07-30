@@ -122,6 +122,24 @@ function createTables() {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS check_ins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      persona TEXT NOT NULL DEFAULT 'bestie',
+      message TEXT NOT NULL,
+      mood TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      read_at TEXT,
+      dismissed_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS mood_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mood TEXT NOT NULL,
+      note TEXT,
+      source TEXT DEFAULT 'chat',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 }
 
@@ -132,6 +150,9 @@ function seedDefaults() {
   stmt.free();
 
   if (count === 0) seedDefaultPersonas();
+
+  // Always sync default personas (pick up new ones on updates)
+  syncDefaultPersonas();
 
   const stmt2 = _db.prepare('SELECT COUNT(*) as c FROM user_profile');
   stmt2.step();
@@ -152,6 +173,27 @@ function seedDefaultPersonas() {
     insert.run([p.name, p.displayName, p.description, p.systemPrompt, p.emoji, p.isDefault ? 1 : 0]);
   }
   insert.free();
+}
+
+/**
+ * Sync any new default personas or updated prompts on restart.
+ * For existing defaults: update prompt/emoji/displayName.
+ * For new defaults (like 'bestie'): insert them.
+ */
+function syncDefaultPersonas() {
+  const { defaultPersonas } = require('../personas/definitions');
+  for (const p of defaultPersonas) {
+    // Try insert first (picks up new personas)
+    _db.run(
+      `INSERT OR IGNORE INTO personas (name, display_name, description, system_prompt, emoji, is_default) VALUES (?, ?, ?, ?, ?, ?)`,
+      [p.name, p.displayName, p.description, p.systemPrompt, p.emoji, p.isDefault ? 1 : 0]
+    );
+    // Update existing default persona's prompt + display info (in case we changed it)
+    _db.run(
+      `UPDATE personas SET display_name = ?, description = ?, system_prompt = ?, emoji = ?, is_default = ? WHERE name = ?`,
+      [p.displayName, p.description, p.systemPrompt, p.emoji, p.isDefault ? 1 : 0, p.name]
+    );
+  }
 }
 
 // ── Wrapper: makes sql.js look like better-sqlite3 ──
