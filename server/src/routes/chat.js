@@ -11,6 +11,7 @@ const ollama = require('../services/ollama');
 const extractor = require('../services/extractor');
 const { TOOL_DEFINITIONS, executeTool } = require('../services/tools');
 const activity = require('../services/activity');
+const emotion = require('../services/emotion');
 
 // Personas that have tool execution enabled
 const TOOL_ENABLED_PERSONAS = ['null'];
@@ -66,14 +67,19 @@ router.post('/', async (req, res) => {
 
     // Retrieve relevant context
     const context = await memory.retrieveContext(db, message, persona);
+    
+    // Process emotional state — Baymax's mood shifts based on what user says
+    const moodContext = emotion.processInteraction(db, message.trim());
 
     // Build conversation history (last 20 messages from this conversation)
     const history = db.prepare(
       'SELECT role, content FROM messages WHERE conversation_id = ? AND role IN (\'user\', \'assistant\') ORDER BY created_at DESC LIMIT 20'
     ).all(convId).reverse();
 
-    // Send to Ollama
-    const fullPrompt = context ? `${systemPrompt}\n\n${context}` : systemPrompt;
+    // Send to Ollama — inject mood context
+    let fullPrompt = systemPrompt;
+    if (context) fullPrompt += '\n\n' + context;
+    fullPrompt += emotion.getMoodContext(db);
 
     const response = await ollama.chat({
       system: fullPrompt,
@@ -117,6 +123,7 @@ router.post('/', async (req, res) => {
       response: responseText,
       conversationId: convId,
       factsExtracted: true,
+      mood: emotion.getMoodInfo(db),
     });
   } catch (err) {
     console.error('[Chat] Error:', err.message);
@@ -165,11 +172,14 @@ router.post('/stream', async (req, res) => {
     });
 
     const context = await memory.retrieveContext(db, message, persona);
+    emotion.processInteraction(db, message);
     const history = db.prepare(
       'SELECT role, content FROM messages WHERE conversation_id = ? AND role IN (\'user\', \'assistant\') ORDER BY created_at DESC LIMIT 20'
     ).all(convId).reverse();
 
-    const fullPrompt = context ? `${systemPrompt}\n\n${context}` : systemPrompt;
+    let fullPrompt = systemPrompt;
+    if (context) fullPrompt += '\n\n' + context;
+    fullPrompt += emotion.getMoodContext(db);
 
     // Set up SSE
     res.setHeader('Content-Type', 'text/event-stream');

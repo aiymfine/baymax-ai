@@ -53,13 +53,14 @@ app.use('/api/personas', require('./routes/persona'));
 app.use('/api/checkins', require('./routes/checkin'));
 app.use('/api/mood', require('./routes/mood'));
 app.use('/api/tools', require('./routes/tools'));
+app.use('/api/emotion', require('./routes/emotion'));
 
 // ── Health Check ────────────────────────────────
 app.get('/api/health', async (req, res) => {
   const ollamaStatus = await ollama.checkHealth();
   res.json({
     status: 'ok',
-    version: '2.0.0',
+    version: '2.1.0',
     ollama: ollamaStatus,
     timestamp: new Date().toISOString(),
   });
@@ -90,10 +91,10 @@ async function start() {
   app.listen(PORT, () => {
     console.log('');
     console.log('  ╔═══════════════════════════════════════╗');
-    console.log('  ║          🔐 Baymax v2.0.0             ║');
+    console.log('  ║          🔐 Baymax v2.1.0             ║');
     console.log(`  ║     Server running on port ${PORT}        ║`);
-    console.log('  ║     API: http://localhost:' + PORT + '/api      ║');
     console.log('  ║     Tools: shell, file, http, system  ║');
+    console.log('  ║     Emotions: 10 moods + spontaneous  ║');
     console.log('  ╚═══════════════════════════════════════╝');
     console.log('');
 
@@ -144,6 +145,39 @@ async function start() {
     // First check-in attempt after 2 minutes, then every 4 hours
     scheduleNextCheckIn(120_000);
     console.log('[Baymax] Check-in scheduler started (every 4h).');
+
+    // ── Spontaneous Message Scheduler ────────────────
+    // Baymax sends random thoughts, memory callbacks, vibe checks
+    // Checks every 20 minutes, but only sends if probability conditions are met
+    const { maybeSendSpontaneous } = require('./services/spontaneous');
+    const spontaneousInterval = 20 * 60_000; // 20 minutes
+    
+    const spontaneousTimer = setInterval(async () => {
+      try {
+        const status = await ollama.checkHealth();
+        if (status.ok) {
+          const result = await maybeSendSpontaneous();
+          if (result) {
+            console.log(`[Spontaneous] Sent (${result.type}): "${result.message.slice(0, 50)}..."`);
+          }
+        }
+      } catch (e) {
+        // Silent fail
+      }
+    }, spontaneousInterval);
+    
+    // First check after 5 minutes (let things warm up)
+    setTimeout(async () => {
+      try {
+        const status = await ollama.checkHealth();
+        if (status.ok) {
+          const result = await maybeSendSpontaneous();
+          if (result) console.log(`[Spontaneous] Initial: "${result.message.slice(0, 50)}..."`);
+        }
+      } catch {}
+    }, 300_000);
+
+    console.log('[Baymax] Spontaneous thought engine started (checks every 20min).');
   });
 }
 

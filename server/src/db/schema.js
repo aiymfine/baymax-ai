@@ -68,6 +68,9 @@ function createTables() {
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (conversation_id) REFERENCES conversations(id)
     );
+    
+    -- Add source column if it doesn't exist (for existing DBs)
+    ;
 
     CREATE TABLE IF NOT EXISTS facts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
