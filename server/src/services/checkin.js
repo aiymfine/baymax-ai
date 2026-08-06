@@ -131,7 +131,8 @@ Rules:
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const cleaned = message.trim();
+    const msgText = typeof message === 'string' ? message : (message.content || '');
+    const cleaned = msgText.trim();
     if (!cleaned || cleaned.length < 3) return null;
 
     // Store the check-in

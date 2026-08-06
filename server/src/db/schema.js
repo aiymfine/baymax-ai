@@ -140,6 +140,38 @@ function createTables() {
       source TEXT DEFAULT 'chat',
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS tool_executions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tool_name TEXT NOT NULL,
+      arguments TEXT DEFAULT '{}',
+      result TEXT DEFAULT '{}',
+      success INTEGER DEFAULT 0,
+      conversation_id INTEGER,
+      persona TEXT DEFAULT 'null',
+      duration_ms INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      activity_type TEXT NOT NULL DEFAULT 'tool',
+      description TEXT,
+      details TEXT DEFAULT '{}',
+      persona TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      started_at TEXT DEFAULT (datetime('now')),
+      ended_at TEXT,
+      summary TEXT,
+      persona TEXT DEFAULT 'null',
+      tools_used INTEGER DEFAULT 0,
+      commands_run INTEGER DEFAULT 0
+    );
   `);
 }
 

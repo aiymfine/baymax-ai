@@ -42,7 +42,8 @@ async function extractFacts(messageContent, role = 'user') {
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const cleaned = response.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+    const text = typeof response === 'string' ? response : (response.content || '');
+    const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
     const facts = JSON.parse(cleaned);
 
     if (!Array.isArray(facts)) return [];
@@ -134,7 +135,8 @@ async function updateUserProfile(db) {
       }],
     });
 
-    db.run('UPDATE user_profile SET summary = ?, updated_at = datetime(\'now\') WHERE id = 1', [response]);
+    const profileText = typeof response === 'string' ? response : (response.content || '');
+    db.run('UPDATE user_profile SET summary = ?, updated_at = datetime(\'now\') WHERE id = 1', [profileText]);
     saveDb();
   } catch (err) {
     console.error('[Extractor] Profile update failed:', err.message);
@@ -173,7 +175,8 @@ async function generateDailySummary(db) {
       }],
     });
 
-    const cleaned = response.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+    const text = typeof response === 'string' ? response : (response.content || '');
+    const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleaned);
 
     db.run(

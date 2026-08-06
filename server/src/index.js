@@ -52,13 +52,14 @@ app.use('/api/memory', require('./routes/memory'));
 app.use('/api/personas', require('./routes/persona'));
 app.use('/api/checkins', require('./routes/checkin'));
 app.use('/api/mood', require('./routes/mood'));
+app.use('/api/tools', require('./routes/tools'));
 
 // ── Health Check ────────────────────────────────
 app.get('/api/health', async (req, res) => {
   const ollamaStatus = await ollama.checkHealth();
   res.json({
     status: 'ok',
-    version: '1.1.0',
+    version: '2.0.0',
     ollama: ollamaStatus,
     timestamp: new Date().toISOString(),
   });
@@ -89,9 +90,10 @@ async function start() {
   app.listen(PORT, () => {
     console.log('');
     console.log('  ╔═══════════════════════════════════════╗');
-    console.log('  ║           ✨ Baymax v1.1.0            ║');
+    console.log('  ║          🔐 Baymax v2.0.0             ║');
     console.log(`  ║     Server running on port ${PORT}        ║`);
     console.log('  ║     API: http://localhost:' + PORT + '/api      ║');
+    console.log('  ║     Tools: shell, file, http, system  ║');
     console.log('  ╚═══════════════════════════════════════╝');
     console.log('');
 
